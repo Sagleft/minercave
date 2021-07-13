@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spatocode/minercave/utils"
+	"minercave/utils"
 )
 
 const (
@@ -182,7 +182,7 @@ func (stratum *Stratum) Listen() {
 		rawMsg, err := stratum.reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				utils.LOG_ERR("DNS error: Bad network or host [%s]\n", stratum.url)
+				utils.LOG_ERR("DNS error: server disconnect [%s] error\n", stratum.url)
 				stratum.Reconnect()
 			} else {
 				utils.LOG_ERR("%s", err)
@@ -215,8 +215,10 @@ func (stratum *Stratum) handleRawMessage(message []byte) (interface{}, error) {
 		return nil, err
 	}
 
+	log.Printf("Server > %s", message)
+
 	value, ok := obj["method"]
-	if ok == true {
+	if ok {
 		err = json.Unmarshal(value, &method)
 		if err != nil {
 			return nil, err
@@ -425,9 +427,10 @@ func (stratum *Stratum) basicHandler(response interface{}) {
 
 // Reconnect reconnects to the stratum server when lost
 func (stratum *Stratum) Reconnect() error {
+	log.Printf("Reconnect to pool %v", stratum.url)
 	conn, err := net.Dial("tcp", stratum.url)
 	if err != nil {
-		utils.LOG_ERR("DNS error: Bad network or host [%s]\n", stratum.url)
+		utils.LOG_ERR("DNS error: can not reconnect [%s]\n", stratum.url)
 	}
 
 	stratum.socket = conn
@@ -448,7 +451,7 @@ func (stratum *Stratum) Subscribe() error {
 	message := StratumRequest{
 		ID:     stratum.id,
 		Method: "mining.subscribe",
-		Params: []string{"minercave"},
+		Params: []string{},
 	}
 
 	stratum.subID = message.ID

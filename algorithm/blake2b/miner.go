@@ -1,12 +1,12 @@
 package blake2b
 
 import (
-	"github.com/spatocode/minercave/net"
+	"minercave/net"
 )
 
 type HashRate struct {
-	Rate float64
-	MinerID  int
+	Rate    float64
+	MinerID int
 }
 
 type MiningWork struct {
@@ -17,10 +17,9 @@ type MiningWork struct {
 type Miner struct {
 	HashRate   chan *HashRate
 	MiningWork chan *MiningWork
-	Client            *net.Stratum
+	Client     *net.Stratum
 }
 
-
 func (miner *Miner) Mine() {
-	
+
 }

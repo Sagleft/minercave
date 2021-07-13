@@ -4,8 +4,8 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/spatocode/minercave/algorithm/sha256d"
-	"github.com/spatocode/minercave/net"
+	"minercave/algorithm/sha256d"
+	"minercave/net"
 )
 
 func Connect(cfg *net.Config) {

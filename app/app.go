@@ -6,12 +6,13 @@ import (
 	"os/signal"
 	"path/filepath"
 
+	"minercave/base"
+	"minercave/net"
+	"minercave/utils"
+
 	"github.com/fatih/color"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
-	"github.com/spatocode/minercave/base"
-	"github.com/spatocode/minercave/net"
-	"github.com/spatocode/minercave/utils"
 )
 
 const (
@@ -29,7 +30,7 @@ var config net.Config
 
 func init() {
 	title := color.New(color.FgCyan, color.Bold)
-	title.Println(` 
+	title.Println(`
 	 _      _   _   _   _   _ _ _ _   _ _ _ _   _ _ _ _       _   _        _  _ _ _ _
 	| \    / | | | | \ | | |  _ _ _| | _ _ _ | |  _ _ _|     / \  \ \    / / |  _ _ _|
 	|  \  /  | | | |  \| | | |_ _ _  | |_ _ _/ | |          /_ _\  \ \  / /  | |_ _ _
@@ -43,7 +44,7 @@ func init() {
 func Exec(config *net.Config) {
 	printVersionInfo()
 	printMemoryInfo()
-	//printCPUInfo()
+	printCPUInfo()
 	printMinerInfo(config)
 
 	sigChan := make(chan os.Signal, 1)

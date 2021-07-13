@@ -3,7 +3,7 @@ package sha256d
 import (
 	"time"
 
-	"github.com/spatocode/minercave/net"
+	"minercave/net"
 )
 
 type HashRate struct {
