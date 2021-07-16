@@ -2,6 +2,8 @@ package net
 
 import (
 	"bufio"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,9 +24,9 @@ const (
 
 // StratumRequest message from stratum server
 type StratumRequest struct {
-	ID     uint     `json:"id"`
-	Method string   `json:"method"`
-	Params []string `json:"params"`
+	ID     uint          `json:"id"`
+	Method string        `json:"method"`
+	Params []interface{} `json:"params"`
 }
 
 // StratumResponse message from statum server
@@ -48,6 +50,11 @@ type SubscribeResponse struct {
 	Notification      string
 	ExtraNonce1       string
 	ExtraNonce2Length float64
+}
+
+type ConfigureResponse struct {
+	VersionRolling     bool
+	VersionRollingMask utils.Version
 }
 
 type NotificationResponse struct {
@@ -99,16 +106,18 @@ type Block struct {
 
 // Job contains information about the job generated
 type Job struct {
-	ID           string
-	Valid        bool
-	ExtraNonce1  string
-	ExtraNonce2  uint
-	Height       int
-	Target       *big.Int
-	Coinbase1    string
-	Coinbase2    string
-	MerkleBranch []string
-	Block        Block
+	ID                 string
+	Valid              bool
+	ExtraNonce1        string
+	ExtraNonce2        uint
+	Height             int
+	Target             *big.Int
+	Coinbase1          string
+	Coinbase2          string
+	MerkleBranch       []string
+	Block              Block
+	VersionRolling     bool
+	VersionRollingMask utils.Version
 }
 
 // Stratum contains information about a stratum pool connection
@@ -128,6 +137,7 @@ type Stratum struct {
 	mutex         sync.Mutex
 	subID         uint
 	submitID      []uint
+	configID      uint
 	id            uint
 	authID        uint
 	diff          float64
@@ -156,12 +166,17 @@ func (stratum *Stratum) Connect() {
 	stratum.socket = conn
 	stratum.id = 1
 	stratum.authID = 2
-	stratum.diff = 1
+	stratum.diff = 2
 	stratum.target = difficultyToTarget(stratum.diff)
 	stratum.reader = bufio.NewReader(stratum.socket)
 	go stratum.Listen()
 
 	err = stratum.Subscribe()
+	if err != nil {
+		utils.LOG_ERR("%s", err)
+	}
+
+	err = stratum.Configure()
 	if err != nil {
 		utils.LOG_ERR("%s", err)
 	}
@@ -173,7 +188,7 @@ func (stratum *Stratum) Connect() {
 
 	stratum.startTime = uint(time.Now().Unix())
 
-	time.Sleep(10000 * time.Minute)
+	// time.Sleep(10000 * time.Minute)
 }
 
 // Listen always listens to incoming message from stratum server
@@ -255,6 +270,47 @@ func (stratum *Stratum) handleRawMessage(message []byte) (interface{}, error) {
 		}
 
 		return authResp, nil
+	}
+
+	if id == stratum.configID {
+		var (
+			result             map[string]json.RawMessage
+			errObj             []interface{}
+			configResp         = &ConfigureResponse{}
+			versionRollingMask string
+		)
+
+		err = json.Unmarshal(obj["result"], &result)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(result) == 0 {
+			return nil, fmt.Errorf("no result")
+		}
+
+		err = json.Unmarshal(obj["error"], &errObj)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(result["version-rolling"], &configResp.VersionRolling)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(result["version-rolling.mask"], &versionRollingMask)
+		if err != nil {
+			return nil, err
+		}
+
+		if data, err := hex.DecodeString(versionRollingMask); err != nil {
+			return nil, err
+		} else {
+			configResp.VersionRollingMask = utils.Version(binary.BigEndian.Uint32(data))
+		}
+
+		return configResp, nil
 	}
 
 	if id == stratum.subID {
@@ -340,10 +396,25 @@ func (stratum *Stratum) handleRawMessage(message []byte) (interface{}, error) {
 		stratReq := &StratumRequest{}
 		stratReq.Method = method
 
-		var stratParam []string
+		var stratParam []interface{}
 		stratParam = append(stratParam, strconv.FormatFloat(stratum.diff, 'E', -1, 32))
 		stratReq.Params = stratParam
 		return stratReq, nil
+
+	case "mining.set_version_mask":
+		var params []interface{}
+
+		err = json.Unmarshal(obj["params"], &params)
+		if err != nil {
+			return nil, err
+		}
+		versionRollingMask, _ := params[0].(string)
+		if data, err := hex.DecodeString(versionRollingMask); err != nil {
+			return nil, err
+		} else {
+			stratum.currentJob.VersionRollingMask = utils.Version(binary.BigEndian.Uint32(data))
+		}
+		return nil, nil
 
 	default:
 		stratResp := &StratumResponse{}
@@ -360,6 +431,8 @@ func (stratum *Stratum) dispatchHandler(response interface{}) {
 	switch response.(type) {
 	case *SubscribeResponse:
 		stratum.subscribeHandler(response)
+	case *ConfigureResponse:
+		stratum.configureHandler(response)
 	case *AuthorizeResponse:
 		stratum.authorizeHandler(response)
 	case *NotificationResponse:
@@ -403,6 +476,13 @@ func (stratum *Stratum) subscribeHandler(response interface{}) {
 	stratum.currentJob.ExtraNonce1 = resp.ExtraNonce1
 	stratum.currentJob.ExtraNonce2 = uint(resp.ExtraNonce2Length)
 	log.Printf("Subscription successful")
+}
+
+func (stratum *Stratum) configureHandler(response interface{}) {
+	resp := response.(*ConfigureResponse)
+	stratum.currentJob.VersionRolling = resp.VersionRolling
+	stratum.currentJob.VersionRollingMask = resp.VersionRollingMask
+	log.Printf("Configure successful")
 }
 
 func (stratum *Stratum) authorizeHandler(response interface{}) {
@@ -451,10 +531,42 @@ func (stratum *Stratum) Subscribe() error {
 	message := StratumRequest{
 		ID:     stratum.id,
 		Method: "mining.subscribe",
-		Params: []string{},
+		Params: []interface{}{""},
 	}
 
 	stratum.subID = message.ID
+	stratum.id++
+
+	jsonMsg, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	_, err = stratum.socket.Write(jsonMsg)
+	if err != nil {
+		return err
+	}
+
+	_, err = stratum.socket.Write([]byte("\n"))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Configure configure client to stratum server for receiving mining jobs
+func (stratum *Stratum) Configure() error {
+	message := StratumRequest{
+		ID:     stratum.id,
+		Method: "mining.configure",
+		Params: []interface{}{
+			[]interface{}{"version-rolling"},
+			map[string]interface{}{"version-rolling.mask": "ffffffff", "version-rolling.min-bit-count": 4},
+		},
+	}
+
+	stratum.configID = message.ID
 	stratum.id++
 
 	jsonMsg, err := json.Marshal(message)
@@ -480,7 +592,7 @@ func (stratum *Stratum) Authorize() error {
 	message := StratumRequest{
 		ID:     stratum.id,
 		Method: "mining.authorize",
-		Params: []string{stratum.user, stratum.pass},
+		Params: []interface{}{stratum.user, stratum.pass},
 	}
 
 	stratum.authID = message.ID

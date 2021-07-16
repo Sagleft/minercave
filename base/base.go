@@ -17,7 +17,7 @@ func Connect(cfg *net.Config) {
 
 	hashrateChan := make(chan *sha256d.HashRate, cfg.Threads)
 
-	miner := sha256d.NewMiner(cfg)
+	miner := sha256d.NewCPUMiner(cfg)
 	miner.HashRate = hashrateChan
 	miner.Mine()
 
@@ -25,7 +25,7 @@ func Connect(cfg *net.Config) {
 	for {
 		for i := 0; i < cfg.Threads; i++ {
 			report := <-hashrateChan
-			hashrateReport[report.MinerID] = report.Rate
+			hashrateReport[report.CPUMinerID] = report.Rate
 		}
 
 		for minerID, hashrate := range hashrateReport {
