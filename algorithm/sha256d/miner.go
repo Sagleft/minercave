@@ -14,13 +14,13 @@ import (
 	"time"
 )
 
-//MaxNonce standard value
+// MaxNonce standard value
 const MaxNonce uint32 = 4294967295
 
-//HashCountSpan counter big enough to avoid mutex bottleneck
+// HashCountSpan counter big enough to avoid mutex bottleneck
 const HashCountSpan uint32 = 200000
 
-//Miner entity defined by an ID. Worker.
+// Miner entity defined by an ID. Worker.
 type Miner struct {
 	ID              int
 	MiningPool      chan chan Chunk
@@ -29,7 +29,7 @@ type Miner struct {
 	quit            chan bool
 }
 
-//NewMiner Creates Miner 'Worker'
+// NewMiner Creates Miner 'Worker'
 func NewMiner(id int, miningpool chan chan Chunk, outchan chan Chunk) Miner {
 	log.Printf("New Miner created.")
 	return Miner{
@@ -40,7 +40,7 @@ func NewMiner(id int, miningpool chan chan Chunk, outchan chan Chunk) Miner {
 		quit:            make(chan bool)}
 }
 
-//Start mining: receive block channels and execute them
+// Start mining: receive block channels and execute them
 func (mine Miner) Start() {
 	go func() {
 		for {
@@ -65,7 +65,7 @@ func (mine Miner) Start() {
 	}()
 }
 
-//Stop tells the Miner to stop working
+// Stop tells the Miner to stop working
 func (mine Miner) Stop() {
 	go func() {
 		log.Printf("Mine " + strconv.Itoa(mine.ID) + " stopped.")
@@ -73,7 +73,7 @@ func (mine Miner) Stop() {
 	}()
 }
 
-//Mining a blockheader and returning the chunk including proper nonce value if suceeded. Splited into two to avoid useless checks and increment if the loging is not activated. Mining can not take more time than 1 second as the block header expires due to the epoch time field changing constantly.
+// Mining a blockheader and returning the chunk including proper nonce value if suceeded. Splited into two to avoid useless checks and increment if the loging is not activated. Mining can not take more time than 1 second as the block header expires due to the epoch time field changing constantly.
 func (mine *Miner) mining(chunk Chunk) (bool, Chunk) {
 	// var hashBig big.Int
 	// var resultDiff big.Int

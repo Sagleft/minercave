@@ -19,7 +19,7 @@ import (
 
 const bitcoinCreationDate uint32 = 1230940800
 
-//Header structure
+// Header structure
 type Header struct {
 	Version       byte   //Block Version Number. Decimal format. 4 bytes Little Endian format originally.
 	HashPrevBlock string //256bits Hash of the previous block header
@@ -48,7 +48,7 @@ func (block *Header) Validate() error {
 	return nil
 }
 
-//Return the hex string of a given block header.
+// Return the hex string of a given block header.
 func (block *Header) hex() string {
 	hexVersion := strconv.FormatInt(int64(block.Version), 16) //Little Endian format already, we keep it that way.
 	switch length := len(hexVersion); length {
@@ -66,7 +66,7 @@ func (block *Header) hex() string {
 //  Common functions
 //
 
-//MakeSemiRandomBlockHeader makes a semi-random block header. Uses pre-defined time and version. Faster to generate than fully random blockheader.
+// MakeSemiRandomBlockHeader makes a semi-random block header. Uses pre-defined time and version. Faster to generate than fully random blockheader.
 func MakeSemiRandomBlockHeader(version byte, currentTime uint32) Header {
 	hashprevblock := randStringBytes(64)
 	hashmerkroot := randStringBytes(64)
@@ -76,7 +76,7 @@ func MakeSemiRandomBlockHeader(version byte, currentTime uint32) Header {
 	return Header{Version: version, HashPrevBlock: hashprevblock, HashMerkRoot: hashmerkroot, Bits: bits, Time: currentTime, Nonce: nonce}
 }
 
-//Generate Hex string-representated number of n characters
+// Generate Hex string-representated number of n characters
 func randStringBytes(n int) string {
 	const letterBytes = "abcdef0123456789"
 	b := make([]byte, n)
@@ -86,14 +86,14 @@ func randStringBytes(n int) string {
 	return string(b)
 }
 
-//Return a Sha256 Hash of given data
+// Return a Sha256 Hash of given data
 func hash256(data []byte) []byte {
 	hash := sha256.New()
 	hash.Write(data)
 	return hash.Sum(nil)
 }
 
-//Doublesha256BlockHeader returns a string representation of doubled-hashed block header
+// Doublesha256BlockHeader returns a string representation of doubled-hashed block header
 func Doublesha256BlockHeader(bh Header) string {
 	data := []byte(bh.hex())
 	hash := hash256(hash256(data))
