@@ -30,4 +30,6 @@ vendor
 *.exe
 *.out
 *.app
+
 minercave
+config.json
