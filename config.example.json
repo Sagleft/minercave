@@ -1,0 +1,12 @@
+{
+    "cryptocurrency": "bitcoin",
+    "threads": 2,
+    "log": true,
+    "pool": {
+        "url": "ss.antpool.com:3333",
+        "user": "vzxc.001",
+        "password": "x",
+        "keepalive": true,
+        "rig-id": "aa"
+    }
+}
