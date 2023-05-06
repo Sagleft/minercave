@@ -12,7 +12,7 @@ import (
 	"minercave/utils"
 )
 
-//Gettarget TODO Calculate the right target depending on the difficulty. This one is totally made up for testing purpose.
+// Gettarget TODO Calculate the right target depending on the difficulty. This one is totally made up for testing purpose.
 func Gettarget(difficulty utils.Difficulty) string {
 	diffAsBig := new(big.Float).SetUint64(uint64(difficulty))
 	bigEndian := "0x00000000ffff0000000000000000000000000000000000000000000000000000"

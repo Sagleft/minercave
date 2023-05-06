@@ -11,7 +11,7 @@ import (
 	"minercave/utils"
 )
 
-//Chunk entity defined by a block and a target. Nonce is here for checking if the chunk is valid
+// Chunk entity defined by a block and a target. Nonce is here for checking if the chunk is valid
 type Chunk struct {
 	Block      block.Header
 	Target     string
@@ -20,7 +20,7 @@ type Chunk struct {
 	Valid      bool
 }
 
-//NewChunkList We are splitting a BlockHeader to spread the mining between the different goroutines
+// NewChunkList We are splitting a BlockHeader to spread the mining between the different goroutines
 func NewChunkList(version byte, epoch uint32, difficulty utils.Difficulty) []Chunk {
 	newBlock := block.MakeSemiRandomBlockHeader(version, epoch)
 	target := Gettarget(difficulty)
