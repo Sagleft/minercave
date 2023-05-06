@@ -46,12 +46,10 @@ func (miner *CPUMiner) createJob() {
 
 func (miner *CPUMiner) Mine() {
 	go miner.createJob()
-	// for i := 0; i < miner.devices; i++ {
-
-	// }
 
 	dispatcher := NewDispatcher()
 	dispatcher.Run()
+
 	//Add Chunks on a regular basis
 	for {
 		//Get a new Chunk and split it accordingly to the machin settings
